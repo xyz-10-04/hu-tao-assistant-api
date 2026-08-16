@@ -1,0 +1,5 @@
+[
+    {"input": "现在几点", "expected": "工具调用"},
+    {"input": "掷个骰子", "expected": "工具调用"},
+    {"input": "帮我算一下48*6", "expected": "工具调用"}
+]

@@ -1,0 +1,6 @@
+hutao_basic.txt        → 角色基础信息（全名、命座、神之眼等）
+hutao_story_1.txt      → 角色故事1
+hutao_story_2.txt      → 角色故事2
+hutao_personality.txt  → 性格特点
+hutao_quotes.txt       → 经典台词
+hutao_others.txt       → 其他角色对胡桃的评价

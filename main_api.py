@@ -3,6 +3,8 @@ from tools import roll_dice, get_current_time, calculate, save_note, read_notes
 from memory import load_memory, save_memory
 from pydantic import BaseModel
 from fastapi import FastAPI
+# from database import engine
+# from models import Base
 
 app = FastAPI(
     title="胡桃助手API",
@@ -25,15 +27,15 @@ async def api_calc(expr: str = Query(...)):
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-@app.get("/notes")
-async def api_read_notes():
-    notes = read_notes()
-    return {"notes": notes}
-
 @app.post("/note")
 async def api_save_note(content: str):
     result = save_note(content)
     return {"status": "saved" if result else "failed"}
+
+@app.get("/notes")
+async def api_read_notes():
+    notes = read_notes()
+    return {"notes": notes}
 
 class MemoryUpdate(BaseModel):
     data: dict  # 前端传入的记忆数据
@@ -52,3 +54,5 @@ async def api_update_memory(update: MemoryUpdate):
         return {"status": "saved", "memory": update.data}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+# Base.metadata.create_all(bind=engine)

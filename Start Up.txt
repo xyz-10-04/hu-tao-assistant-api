@@ -5,3 +5,5 @@ python run_tests.py
 venv\Scripts\activate
 
 uvicorn main_api:app --reload
+
+python

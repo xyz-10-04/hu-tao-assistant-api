@@ -3,27 +3,36 @@ import random
 from datetime import datetime
 
 
+
+# 新函数用不同的名字，保存到数据库
 def save_note(content):
-    n = datetime.now().strftime("%Y年%m月%d日 %H:%M:%S")
-    data_content = n + '-' + content + '\n'
-    # print(f"【调试】正在保存：{content}")
+    from database import SessionLocal
+    from models import Note
+    db = SessionLocal()
     try:
-        with open("note.txt", 'a',  encoding='utf-8') as f: 
-            f.write(data_content)
-            return True
+        note = Note(content=content)
+        db.add(note)
+        db.commit()
+        return True
     except Exception as e:
-        print(f'保存失败{e}')
+        db.rollback()
+        print(f"保存失败: {e}")
+        return False
+    finally:
+        db.close()
 
 def read_notes():
-    a = []
+    from database import SessionLocal
+    from models import Note
+    db = SessionLocal()
     try:
-        with open("note.txt", 'r', encoding='utf-8') as f:
-            b = f.readlines()
-            a = [line.strip() for line in b]
-            return a
-    except (FileNotFoundError):
+        notes = db.query(Note).all()
+        return [note.content for note in notes]
+    except Exception as e:
+        print(f"读取失败: {e}")
         return []
-
+    finally:
+        db.close()
  # ===========工具捕捉==========
 def parse_tool_call(response_text):
     match = re.search(r'\[TOOL: (.*?)\]\s*(.*)$', response_text)

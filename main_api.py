@@ -3,6 +3,7 @@ from tools import roll_dice, get_current_time, calculate, save_note, read_notes
 from memory import load_memory, save_memory
 from pydantic import BaseModel
 from fastapi import FastAPI
+from langchain_main import agent
 # from database import engine
 # from models import Base
 
@@ -56,3 +57,40 @@ async def api_update_memory(update: MemoryUpdate):
         raise HTTPException(status_code=500, detail=str(e))
 
 # Base.metadata.create_all(bind=engine)
+
+
+class ChatRequest(BaseModel):
+    message: str
+
+import asyncio
+
+@app.post("/chat")
+async def chat_endpoint(request: ChatRequest):
+    print(f"收到请求: {request.message}")  # 关键调试
+    # 暂时先返回固定回复测试
+    try:
+        # 设置 30 秒超时
+        result = await asyncio.wait_for(
+            asyncio.to_thread(
+                agent.invoke,
+                {"messages": [{"role": "user", "content": request.message}]}
+            ),
+            timeout=30.0
+        )
+        reply = result["messages"][-1].content
+        return {"reply": reply}
+    except asyncio.TimeoutError:
+        return {"error": "请求超时，请稍后再试"}
+    except Exception as e:
+        return {"error": str(e)}
+
+
+from fastapi.middleware.cors import CORSMiddleware
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # 开发环境允许所有来源
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)

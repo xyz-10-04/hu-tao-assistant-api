@@ -2,7 +2,7 @@ import os
 from dotenv import load_dotenv
 from langchain_openai import ChatOpenAI
 from langchain.agents import create_agent
-from langchain_tools import roll_dice, get_current_time, calculate, save_note, read_notes
+from langchain_tools import roll_dice, get_current_time, calculate, save_note, read_notes, retrieve_hu_tao_knowledge
 
 load_dotenv()
 
@@ -15,7 +15,7 @@ model = ChatOpenAI(
 )
  
 # 把你从 langchain_tools.py 导入的、加了 @tool 的函数放在列表里
-tools = [roll_dice, get_current_time, calculate, save_note, read_notes]
+tools = [roll_dice, get_current_time, calculate, save_note, read_notes, retrieve_hu_tao_knowledge]
 
 # 系统提示词（让 Agent 知道自己是胡桃助手）
 system_prompt = """你是一个胡桃助手，你可以调用以下工具来帮助用户：
@@ -35,16 +35,18 @@ agent = create_agent(
 
 print("工具助手已启动，输入 exit 或 quit 退出")
 
-while True:
-    user_input = input("你：")
-    if user_input.lower() in ('exit', 'quit'):
-        break
+if __name__ == "__main__":
+    while True:
+        user_input = input("你：")
+        if user_input.lower() in ('exit', 'quit'):
+            break
 
-    # LangChain 1.0 推荐的调用方式[reference:3][reference:4]
-    result = agent.invoke({
-        "messages": [{"role": "user", "content": user_input}]
-    })
+        # LangChain 1.0 推荐的调用方式[reference:3][reference:4]
+        result = agent.invoke({
+            "messages": [{"role": "user", "content": user_input}]
+        })
 
-    # 提取最后一条回复
-    reply = result["messages"][-1].content
-    print(f"胡桃：{reply}")
+        # 提取最后一条回复
+        reply = result["messages"][-1].content
+        print(f"胡桃：{reply}")
+

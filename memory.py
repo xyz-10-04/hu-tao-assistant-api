@@ -1,21 +1,3 @@
-import json
-from config import MEMORY_FILE
-
-
-# def load_memory():
-#     try:
-#         with open(MEMORY_FILE, 'r', encoding='utf-8') as f:
-#             return json.load(f)
-#     except (FileNotFoundError, json.JSONDecodeError):
-#         return {}
-
-# def save_memory(data):
-#     # MEMORY_FILE = MEMORY + MEMORY_FILE
-#     try:
-#         with open(MEMORY_FILE, 'w',  encoding='utf-8') as f:
-#             return json.dump(data, f, indent=2)
-#     except Exception as e:
-#         print(f"保存记忆失败：{e}")
 
 
 def load_memory():

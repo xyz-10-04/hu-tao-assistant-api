@@ -1,6 +1,3 @@
-import os
-os.environ['HF_ENDPOINT'] = 'https://hf-mirror.com'
-
 from fastapi import FastAPI, Query, HTTPException
 from tools import roll_dice, get_current_time, calculate, save_note, read_notes
 from memory import load_memory, save_memory
@@ -107,7 +104,7 @@ async def chat_endpoint(request: ChatRequest):
     logger.info(f"[{request_id}] 收到请求: {request.message[:50]}...") # 截断长消息
 
     try:
-        # 设置 30 秒超时
+        # 设置 90 秒超时
         result = await asyncio.wait_for(
             asyncio.to_thread(
                 agent.invoke,

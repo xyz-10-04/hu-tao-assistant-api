@@ -21,7 +21,11 @@ ENV/
 *.log
 *.sqlite
 *.db
+bert/
+models/
+chroma_db/
 
 # OS generated files
 .DS_Store
 Thumbs.db
+

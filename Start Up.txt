@@ -11,3 +11,11 @@ uvicorn main_api:app --reload
 streamlit run app.py
 
 python
+
+git add .
+
+git status
+
+git commit -m "feat: "
+
+git push

@@ -1,5 +1,6 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, Session
+from typing import Generator
 
 # 创建数据库引擎（使用 SQLite）
 DATABASE_URL = "sqlite:///./hutao.db"  # 会在项目根目录生成 hutao.db 文件
@@ -9,7 +10,7 @@ engine = create_engine(DATABASE_URL, echo=True)  # echo=True 会打印执行的 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 # 依赖注入用：每次请求获取一个会话
-def get_db() -> Session:
+def get_db() -> Generator[Session, None, None]:
     db = SessionLocal()
     try:
         yield db

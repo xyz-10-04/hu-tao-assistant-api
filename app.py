@@ -7,6 +7,22 @@ API_URL = "http://localhost:8000/chat"
 st.title("胡桃助手")
 st.caption("往生堂第七十七代堂主，为你服务")
 
+
+def stream_chat(message):
+    url = "http://localhost:8000/chat/stream"
+    try:
+        response = requests.post(url, json={"message": message}, stream=True, timeout=120)
+        for line in response.iter_lines():
+            if line:
+                decoded = line.decode('utf-8')
+                if decoded.startswith("data: "):
+                    content = decoded[6:]
+                    if content == "[DONE]":
+                        break
+                    yield content
+    except Exception as e:
+        yield f"连接失败: {e}"
+
 with st.sidebar:
     st.header("🎯 工具")
     
@@ -55,26 +71,11 @@ if user_input:
     with st.chat_message("user"):
         st.markdown(user_input)
 
-    # 调用后端 Agent
-    # 调用后端 Agent
+    # 流式助手回复（保留思考提示 + 超时/异常处理）
     with st.chat_message("assistant"):
         with st.spinner("胡桃正在思考..."):
             try:
-                response = requests.post(
-                    "http://localhost:8000/chat",
-                    json={"message": user_input},
-                    timeout=30
-            )
-                if response.status_code == 200:
-                    data = response.json()
-                    reply = data.get("reply", "胡桃没有回答，可能是出了点小问题。")
-                else:
-                    reply = f"后端返回错误：{response.status_code}"
-            except requests.exceptions.Timeout:
-                reply = "请求超时，请稍后再试"
+                response = st.write_stream(stream_chat(user_input))
             except Exception as e:
-                reply = f"无法连接到后端服务：{e}"
-        st.markdown(reply)
-        st.session_state.messages.append({"role": "assistant", "content": reply})
-
-    
+                response = f"处理请求时发生错误：{e}"
+        st.session_state.messages.append({"role": "assistant", "content": response})

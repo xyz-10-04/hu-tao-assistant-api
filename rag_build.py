@@ -1,66 +1,65 @@
-import chromadb
-from chromadb.utils import embedding_functions
-from sentence_transformers import SentenceTransformer
-import numpy as np
-from api import call_api  # 导入你已有的 API 调用函数
 
+from langchain_community.embeddings import HuggingFaceEmbeddings
+from langchain_community.vectorstores import FAISS
+from langchain_community.document_loaders import TextLoader
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 import os
-os.environ["HF_ENDPOINT"] = "https://hf-mirror.com"
 
-# 1. 初始化 ChromaDB（持久化）
-client = chromadb.PersistentClient(path="./chroma_db")
-collection = client.get_or_create_collection(
-    name="huTao_knowledge",
-    embedding_function=embedding_functions.SentenceTransformerEmbeddingFunction(
-        model_name="paraphrase-multilingual-MiniLM-L12-v2"  # ✅ 多语言模型
-    )
+# 1. 加载你本地的 chinese-roberta-wwm-ext-large 模型
+# 注意：这里的路径指向你下载好的模型文件夹
+# 如果你还没有这个模型，需要先从 Hugging Face 下载到本地
+embedding_model = HuggingFaceEmbeddings(
+    model_name="F:/AI_Projects/hutao/bert/chinese-roberta-wwm-ext-large",  # 替换成你实际的模型路径
+    model_kwargs={'device': 'cpu'},  # 可以改成 'cuda' 如果显卡够用
+    encode_kwargs={'normalize_embeddings': False}
 )
 
-# 2. 准备文档（手动切分）
-documents = [
-    "胡桃是往生堂第七十七代堂主，性格活泼开朗。",
-    "胡桃的生日是7月15日。",
-    "胡桃的武器是护摩之杖。",
-    # ... 更多文档块
-]
-ids = [f"doc_{i}" for i in range(len(documents))]
+# 2. 加载知识库文档
+def load_documents():
+    docs = []
+    data_dir = "knowledge/"
+    for filename in os.listdir(data_dir):
+        if filename.endswith(".txt"):
+            loader = TextLoader(os.path.join(data_dir, filename), encoding="utf-8")
+            docs.extend(loader.load())
+    return docs
 
-# 3. 存入向量库（首次运行添加，后续注释掉或清空再添加）
-# 如果集合已有数据，先清空
-try:
-    existing_ids = collection.get()['ids']
-    if existing_ids:
-        collection.delete(ids=existing_ids)
-except Exception:
-    pass
-
-collection.add(
-    documents=documents,
-    ids=ids
-)
-
-# 4. 检索
-def search_hu_tao(query, k=2):
-    results = collection.query(
-        query_texts=[query],
-        n_results=k
+# 3. 文本切分
+def split_documents(docs):
+    text_splitter = RecursiveCharacterTextSplitter(
+        chunk_size=200,
+        chunk_overlap=40,
+        separators=["\n\n", "\n", "。", "！", "？", "；", "，", " ", ""]
     )
-    return results['documents'][0]
+    return text_splitter.split_documents(docs)
 
-# 5. 生成（调用已有的 call_api）
-def ask(query):
-    docs = search_hu_tao(query, k=2)
-    context = "\n".join(docs)
-    prompt = f"""基于以下信息回答问题：
+# 4. 构建 FAISS 向量库
+def build_vectorstore(chunks):
+    # FAISS 直接保存到本地目录，类似之前 ChromaDB 的 persist
+    vectordb = FAISS.from_documents(
+        documents=chunks,
+        embedding=embedding_model
+    )
+    # 保存到本地，方便下次直接加载
+    vectordb.save_local("./faiss_index")
+    return vectordb
 
-{context}
-
-问题：{query}
-答案："""
+# 5. 检索函数（供 Agent 调用）
+def search_hu_tao(query, k=3):
+    # 如果向量库已存在，直接加载；否则先构建
+    if os.path.exists("./faiss_index"):
+        vectordb = FAISS.load_local(
+            "./faiss_index", 
+            embedding_model,
+            allow_dangerous_deserialization=True  # 因为是我们自己创建的，安全
+        )
+    else:
+        docs = load_documents()
+        chunks = split_documents(docs)
+        vectordb = build_vectorstore(chunks)
     
-    response = call_api(prompt)  # 调用你已有的 API 函数
-    return response.choices[0].message.content
+    # 执行检索
+    results = vectordb.similarity_search(query, k=k)
+    return [doc.page_content for doc in results]
 
-# 6. 查询
-if __name__ == "__main__":
-    print(ask("胡桃的生日是哪天？"))
+

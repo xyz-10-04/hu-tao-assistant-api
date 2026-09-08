@@ -13,7 +13,7 @@ model = ChatOpenAI(
     openai_api_base="https://api.deepseek.com",  # 注意参数名是 openai_api_base
     temperature=0.7
 )
- 
+
 # 把你从 langchain_tools.py 导入的、加了 @tool 的函数放在列表里
 tools = [roll_dice, get_current_time, calculate, save_note, read_notes, retrieve_hu_tao_knowledge]
 

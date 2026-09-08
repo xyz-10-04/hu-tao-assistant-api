@@ -3,8 +3,9 @@ import random
 import re
 from datetime import datetime
 
-from langchain.tools import tool
-from rag_build import search_hu_tao  # 假设这个函数存在
+from rag_build import search_hu_tao  
+
+
 
 def parse_tool_call(response_text):
     """  工具名称捕捉  """
@@ -111,12 +112,15 @@ def read_notes():
     except (FileNotFoundError):
         return []
 
+
 @tool
 def retrieve_hu_tao_knowledge(query: str) -> str:
     """当用户询问关于胡桃、往生堂、璃月等背景故事或角色信息时，使用此工具检索相关知识。"""
-    docs = search_hu_tao(query, k=3)
-    if not docs:
-        return "未找到相关信息"
-    # 将文档拼接成一段文本
-    context = "\n".join(docs)
-    return f"根据胡桃知识库：{context}"
+    try:
+        docs = search_hu_tao(query, k=3)
+        if not docs:
+            return "未找到相关信息"
+        context = "\n".join(docs)
+        return f"根据胡桃知识库：{context}"
+    except Exception as e:
+        return f"检索失败：{e}"

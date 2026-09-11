@@ -1,33 +1,12 @@
 from langchain.tools import tool
 import random
-import re
 from datetime import datetime
-
 from rag_build import search_hu_tao  
 
-
-
-def parse_tool_call(response_text):
-    """  工具名称捕捉  """
-    match = re.search(r'\[TOOL: (.*?)\]\s*(.*)$', response_text)
-    if match:
-        tool_name = match.group(1)
-        param = match.group(2)
-        return tool_name, param
-    else:
-        return None, None
 
 @tool
 def calculate(expr):
     """ 计算数学算式 """
-    # ALLOWED_CHARS = "0123456789+-*/.() "
-    # if all(c in ALLOWED_CHARS for c in expr):
-    #     return eval(expr)
-    # try:
-        
-    # except (SyntaxError, ZeroDivisionError, TypeError):
-    #     return ("请输入正确的数字或计算符号")
-
     # 1. 白名单：只允许数字、运算符、括号、空格和小数点
     ALLOWED_CHARS = "0123456789+-*/.() "
     
@@ -60,67 +39,74 @@ def get_current_time():
     return datetime.now().strftime("%Y年%m月%d日 %H:%M:%S")
 
 
-
-def execute_tool(tool_name, param=None):
-    """ 工具类型 """
-    tools = {
-        "roll_dice": roll_dice,
-        "get_current_time": get_current_time,
-        "calculate": calculate
-    }
-    if tool_name in tools:
-        if tool_name == "roll_dice":
-            result = roll_dice()
-            return f"摇骰子的结果：{result}"
-
-        elif tool_name == "get_current_time":
-            result = get_current_time()
-            return f"当前时间：{result}"
-
-        elif tool_name == "calculate":
-            if param is None:
-                return "计算失败：没有提供表达式"
-            result = calculate(param)
-            return f"计算的结果：{result}"
-    else:
-        return "未知工具"
-
+# 新函数用不同的名字，保存到数据库
 
 @tool
 def save_note(content):
-    """ 记笔记 """
-    n = datetime.now().strftime("%Y年%m月%d日 %H:%M:%S")
-    data_content = n + '-' + content + '\n'
-    # print(f"【调试】正在保存：{content}")
+    """保存笔记到数据库"""
+    from database import SessionLocal
+    from models import Note
+    db = SessionLocal()
     try:
-        with open("note.txt", 'a',  encoding='utf-8') as f: 
-            f.write(data_content)
-            return True
+        note = Note(content=content)
+        db.add(note)
+        db.commit()
+        return True
     except Exception as e:
-        print(f'保存失败{e}')
-
+        db.rollback()
+        print(f"保存失败: {e}")
+        return False
+    finally:
+        db.close()
 
 @tool
 def read_notes():
-    """ 读笔记 """
-    a = []
+    """读取数据库中的所有笔记"""
+    from database import SessionLocal
+    from models import Note
+    db = SessionLocal()
     try:
-        with open("note.txt", 'r', encoding='utf-8') as f:
-            b = f.readlines()
-            a = [line.strip() for line in b]
-            return a
-    except (FileNotFoundError):
+        notes = db.query(Note).all()
+        return [note.content for note in notes]
+    except Exception as e:
+        print(f"读取失败: {e}")
         return []
+    finally:
+        db.close()
 
 
 @tool
-def retrieve_hu_tao_knowledge(query: str) -> str:
-    """当用户询问关于胡桃、往生堂、璃月等背景故事或角色信息时，使用此工具检索相关知识。"""
+def search_character_knowledge(query: str) -> str:
+    """当用户询问胡桃是否认识某个角色、对其他角色的评价时使用此工具。"""
     try:
-        docs = search_hu_tao(query, k=3)
+        docs = search_hu_tao(query, k=8, category="character")
         if not docs:
             return "未找到相关信息"
         context = "\n".join(docs)
-        return f"根据胡桃知识库：{context}"
+        return f"以下内容说明胡桃认识相关角色，请据此回答：\n{context}"
+    except Exception as e:
+        return f"检索失败：{e}"
+
+@tool
+def search_food_knowledge(query: str) -> str:
+    """当用户询问胡桃喜欢的食物、讨厌的食物、料理相关问题时使用此工具。"""
+    try:
+        docs = search_hu_tao(query, k=8, category="food")
+        if not docs:
+                return "未找到相关信息"
+        context = "\n".join(docs)
+        return f"以下内容说明胡桃对食物的偏好，请据此回答：\n{context}"
+    except Exception as e:
+        return f"检索失败：{e}"
+
+@tool
+def search_story_knowledge(query: str) -> str:
+    """当用户询问胡桃的身世、往生堂背景、角色故事时使用此工具。"""
+    try:
+        docs = search_hu_tao(query, k=8, category="story")
+        if not docs:
+            return "未找到相关信息"
+        context = "\n".join(docs)
+        return f"以下内容说明胡桃的身世和背景，请据此回答：\n{context}"
     except Exception as e:
         return f"检索失败：{e}"

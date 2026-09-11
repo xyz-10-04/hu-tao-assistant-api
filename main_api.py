@@ -1,5 +1,5 @@
 from fastapi import FastAPI, Query, HTTPException
-from tools import roll_dice, get_current_time, calculate, save_note, read_notes
+from tools_api import roll_dice, get_current_time, calculate, save_note, read_notes
 from memory import load_memory, save_memory
 
 from pydantic import BaseModel, Field
@@ -142,7 +142,7 @@ async def chat_stream_endpoint(request: ChatRequest):
         except Exception as e:
             logger.error(f"[{request_id}] 流式处理失败: {e}")
             yield f"data: 处理失败: {str(e)}\n\n"
-
+            
     return StreamingResponse(generate(), media_type="text/event-stream")
   
 from fastapi.middleware.cors import CORSMiddleware

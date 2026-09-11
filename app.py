@@ -52,6 +52,34 @@ with st.sidebar:
             else:
                 st.error("计算失败")
 
+    # 笔记管理
+    st.subheader("📝 笔记")
+    note_content = st.text_input("输入笔记内容", key="note_input")
+    if st.button("保存笔记"):
+        if note_content:
+            response = requests.post(
+                "http://localhost:8000/note",
+                params={"content": note_content}
+            )
+            if response.status_code == 200:
+                st.success("✅ 笔记已保存")
+            else:
+                st.error("保存失败")
+        else:
+            st.warning("请输入笔记内容")
+
+    if st.button("📖 查看所有笔记"):
+        response = requests.get("http://localhost:8000/notes")
+        if response.status_code == 200:
+            notes = response.json().get("notes", [])
+            if notes:
+                for note in notes:
+                    st.write(f"- {note}")
+            else:
+                st.info("暂无笔记")
+        else:
+            st.error("读取失败")
+
 # 初始化聊天历史
 if "messages" not in st.session_state:
     st.session_state.messages = [

@@ -12,6 +12,19 @@ def stream_chat(message):
     url = "http://localhost:8000/chat/stream"
     try:
         response = requests.post(url, json={"message": message}, stream=True, timeout=120)
+        
+        # ← 在这里加：判断状态码
+        if response.status_code != 200:
+            try:
+                error_detail = response.json().get("detail", "请求失败")
+                # 422 的 detail 是一个列表，里面有具体的校验信息
+                if isinstance(error_detail, list):
+                    error_detail = error_detail[0].get("msg", "输入不合法")
+                yield f"输入有误：{error_detail}"
+            except Exception:
+                yield f"请求失败，状态码：{response.status_code}"
+            return
+
         for line in response.iter_lines():
             if line:
                 decoded = line.decode('utf-8')

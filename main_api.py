@@ -16,6 +16,7 @@ import logging
 from logging.handlers import RotatingFileHandler
 import uuid
 
+
 # 创建 logger
 logger = logging.getLogger("huTao")   # "huTao" 可以改成你喜欢的名字，但不是必须改
 logger.setLevel(logging.INFO)   # 这一行保留，它控制了日志级别
@@ -73,6 +74,7 @@ async def api_read_notes():
 class MemoryUpdate(BaseModel):
     data: dict  # 前端传入的记忆数据
 
+
 @app.get("/memory")
 async def api_get_memory():
     """获取当前记忆"""
@@ -127,6 +129,12 @@ async def chat_endpoint(request: ChatRequest):
 async def chat_stream_endpoint(request: ChatRequest):
     request_id = str(uuid.uuid4())[:8]
     logger.info(f"[{request_id}] 收到流式请求: {request.message[:50]}...")
+
+    if len(request.message) > 500:
+        async def error_stream():
+            yield f"data: 输入过长，请缩短后再试\n\n"
+            yield "data: [DONE]\n\n"
+        return StreamingResponse(error_stream(), media_type="text/event-stream")
 
     async def generate():
         try:

@@ -2,7 +2,7 @@ from langchain.tools import tool
 import random
 from datetime import datetime
 from rag_build import search_hu_tao  
-
+from memory import load_memory, save_memory
 
 @tool
 def calculate(expr):
@@ -110,3 +110,27 @@ def search_story_knowledge(query: str) -> str:
         return f"以下内容说明胡桃的身世和背景，请据此回答：\n{context}"
     except Exception as e:
         return f"检索失败：{e}"
+
+@tool
+def save_user_info(info_type: str, content: str) -> str:
+    """当用户告诉你他的个人信息时使用此工具。
+    info_type 可以是 "name"（姓名）、"hobby"（爱好）等。
+    content 是具体内容，例如 "刻晴" 或 "吃火锅"。
+    """
+    memory = load_memory()
+    memory[info_type] = content
+    save_memory(memory)
+    return f"已记住用户的{info_type}是{content}"
+
+
+@tool
+def query_user_info(info_type: str) -> str:
+    """当用户询问你他的个人信息时使用此工具。
+    info_type 可以是 "name"（姓名）、"hobby"（爱好）等。
+    """
+    memory = load_memory()
+    value = memory.get(info_type)
+    if value:
+        return f"用户的{info_type}是{value}"
+    else:
+        return f"未找到用户的{info_type}信息"

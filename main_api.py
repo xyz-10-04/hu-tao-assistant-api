@@ -5,8 +5,6 @@ from memory import load_memory, save_memory
 from pydantic import BaseModel, Field
 from fastapi import FastAPI
 from langchain_main import agent
-# from database import engine
-# from models import Base
 
 from fastapi.responses import StreamingResponse
 
@@ -89,8 +87,6 @@ async def api_update_memory(update: MemoryUpdate):
         return {"status": "saved", "memory": update.data}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-
-# Base.metadata.create_all(bind=engine)
 
 
 class ChatRequest(BaseModel):

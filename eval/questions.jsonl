@@ -1,0 +1,20 @@
+{"id": "q001", "question": "胡桃喜欢吃什么？", "category": "misc", "expected_doc_ids": ["hutao_voice_lines_33"], "difficulty": "easy"}
+{"id": "q002", "question": "胡桃怎么评价蓝砚？", "category": "character", "expected_doc_ids": ["胡桃对他人的评价_27"], "difficulty": "easy"}
+{"id": "q003", "question": "香菱怎么看待胡桃？", "category": "character", "expected_doc_ids": ["他人对胡桃的评价_12"], "difficulty": "easy"}
+{"id": "q004", "question": "胡桃的神之眼是怎么获得的？", "category": "story", "expected_doc_ids": ["hutao_basic_4"], "difficulty": "medium "}
+{"id": "q005", "question": "胡桃对生意的看法？", "category": "story", "expected_doc_ids": ["hutao_story2_10"], "difficulty": "medium"}
+{"id": "q006", "question": "你是谁", "category": "misc", "expected_doc_ids": ["hutao_voice_lines_0"], "difficulty": "easy"}
+{"id": "q007", "question": "胡桃有什么爱好", "category": "misc", "expected_doc_ids": ["hutao_voice_lines_27"], "difficulty": "easy"}
+{"id": "q008", "question": "早上好", "category": "misc", "expected_doc_ids": ["hutao_voice_lines_9"], "difficulty": "easy"}
+{"id": "q009", "question": "有什么感兴趣的", "category": "misc", "expected_doc_ids": ["hutao_voice_lines_21"], "difficulty": "easy "}
+{"id": "q010", "question": "有什么想要分享的", "category": "misc", "expected_doc_ids": ["hutao_voice_lines_20"], "difficulty": "easy"}
+{"id": "q011", "question": "对申鹤的看法", "category": "character", "expected_doc_ids": ["胡桃对他人的评价_26"], "difficulty": "medium"}
+{"id": "q012", "question": "行秋怎么看待你", "category": "character", "expected_doc_ids": ["他人对胡桃的评价_10", "hutao_story5_16", "hutao_story5_17"], "difficulty": "medium"}
+{"id": "q013", "question": "兹白对你评价如何", "category": "character", "expected_doc_ids": ["他人对胡桃的评价_0"], "difficulty": "easy"}
+{"id": "q014", "question": "刻晴人怎么样", "category": "character", "expected_doc_ids": ["胡桃对他人的评价_23"], "difficulty": "easy"}
+{"id": "q015", "question": "云堇和你的关系怎么样", "category": "character", "expected_doc_ids": ["他人对胡桃的评价_5", "他人对胡桃的评价_25"], "difficulty": "easy"}
+{"id": "q016", "question": "往生堂的含义", "category": "story", "expected_doc_ids": ["hutao_story1_8"], "difficulty": "medium"}
+{"id": "q017", "question": "胡桃做生意的态度", "category": "story", "expected_doc_ids": ["hutao_story2_10", "hutao_story2_11"], "difficulty": "easy"}
+{"id": "q018", "question": "七七为什么这么怕你", "category": "story", "expected_doc_ids": ["他人对胡桃的评价_7", "hutao_story4_14", "hutao_story4_15"], "difficulty": "medium"}
+{"id": "q019", "question": "乾坤泰卦帽的由来", "category": "story", "expected_doc_ids": ["hutao_basic_3"], "difficulty": "easy"}
+{"id": "q020", "question": "如何看待往生堂的钟离客卿", "category": "character", "expected_doc_ids": ["hutao_story2_10", "hutao_story2_11", "他人对胡桃的评价_15"], "difficulty": "easy"}

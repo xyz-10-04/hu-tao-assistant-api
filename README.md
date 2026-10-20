@@ -22,7 +22,7 @@
   后端 **FastAPI + SSE**，前端 **Streamlit** 逐字显示，聊天体验更自然。
 
 - **工程化**  
-  模块化拆分、环境变量管理、日志轮转、依赖精简（100+ → 20 个）。
+  模块化拆分、环境变量管理、日志轮转、依赖精简（100+ → 15 个）。
 
 ## 🧠 技术栈
 
@@ -43,7 +43,14 @@ hu-tao-assistant-api/
 │ ├── 角色评价/
 │ ├── 背景故事/
 │ └── 台词杂项/
-├── faiss_index_*/ # 各分类的 FAISS 索引（自动生成）
+├── eval/ 测试文件
+│ ├── draft_questions.txt
+│ ├── questions.jsonl
+│ ├── report.md
+│ └── run_retrieval_eval.py
+├── faiss_index_misc        其他台词 FAISS 索引（自动生成）
+├── faiss_index_character   角色评价 FAISS 索引（自动生成）
+├── faiss_index_story       角色故事 FAISS 索引（自动生成）
 ├── app.py # Streamlit 前端
 ├── main_api.py # FastAPI 后端入口
 ├── langchain_main.py # Agent 初始化与系统提示词
@@ -102,8 +109,8 @@ streamlit run app.py
 
 🧪 测试与效果
 测试集：30 个预设问题（角色设定、生日、武器、食物、人际关系等）
-准确率：≥90%（人工判断答案是否引用文档原文）
-优化措施：混合检索、分类索引、Prompt 工程、工具拆分、chunk_size=90、k=8
+准确率：85%/90%/90% （人工判断答案是否引用文档原文）
+优化措施：混合检索、分类索引、Prompt 工程、工具拆分、chunk_size=90、k=10
 
 📌 后续计划
 增量更新知识库

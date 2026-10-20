@@ -4,7 +4,7 @@ from memory import load_memory, save_memory
 
 from pydantic import BaseModel, Field
 from fastapi import FastAPI
-from langchain_main import agent
+from main import agent
 
 from fastapi.responses import StreamingResponse
 

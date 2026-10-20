@@ -1,0 +1,4 @@
+TypeError: 'int' object is not iterable                                                    整数（int）不是可迭代对象。 你试图对整数做“遍历”或“解包”，Python 就报这个错。
+TypeError: unsupported operand type(s) for -: 'int' and 'dict'               某个地方在做减法 -，但左边是 int（整数），右边是 dict（字典）。
+ZeroDivisionError: division by zero                                                      分母不能为0
+AttributeError: 'list' object has no attribute 'decode'                           你的代码中有一个变量是 list（列表），但你却对它调用了 .decode() 方法，而列表对象没有这个方法。

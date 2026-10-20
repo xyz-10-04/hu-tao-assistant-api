@@ -59,6 +59,7 @@ def save_note(content):
     finally:
         db.close()
 
+
 @tool
 def read_notes():
     """读取数据库中的所有笔记"""
@@ -76,40 +77,18 @@ def read_notes():
 
 
 @tool
-def search_character_knowledge(query: str) -> str:
-    """当用户询问胡桃是否认识某个角色、对其他角色的评价时使用此工具。"""
+def search_hu_tao_knowledge(query: str) -> str:
+    """当用户询问胡桃的喜好、评价、身世背景、台词等问题时，使用此工具检索知识库。"""
     try:
-        docs = search_hu_tao(query, k=8, category="character")
+        # 不传 category，默认全库混合检索
+        docs = search_hu_tao(query, k=8)
         if not docs:
             return "未找到相关信息"
         context = "\n".join(docs)
-        return f"以下内容说明胡桃认识相关角色，请据此回答：\n{context}"
+        return f"以下是从胡桃知识库检索到的相关内容，请据此回答：\n{context}"
     except Exception as e:
         return f"检索失败：{e}"
 
-@tool
-def search_food_knowledge(query: str) -> str:
-    """当用户询问胡桃喜欢的食物、讨厌的食物、料理相关问题时使用此工具。"""
-    try:
-        docs = search_hu_tao(query, k=8, category="food")
-        if not docs:
-                return "未找到相关信息"
-        context = "\n".join(docs)
-        return f"以下内容说明胡桃对食物的偏好，请据此回答：\n{context}"
-    except Exception as e:
-        return f"检索失败：{e}"
-
-@tool
-def search_story_knowledge(query: str) -> str:
-    """当用户询问胡桃的身世、往生堂背景、角色故事时使用此工具。"""
-    try:
-        docs = search_hu_tao(query, k=8, category="story")
-        if not docs:
-            return "未找到相关信息"
-        context = "\n".join(docs)
-        return f"以下内容说明胡桃的身世和背景，请据此回答：\n{context}"
-    except Exception as e:
-        return f"检索失败：{e}"
 
 @tool
 def save_user_info(info_type: str, content: str) -> str:

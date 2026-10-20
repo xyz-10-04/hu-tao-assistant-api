@@ -5,16 +5,21 @@ from langchain_community.document_loaders import TextLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 import os
 
-from langchain_community.retrievers import BM25Retriever
-from langchain_classic.retrievers import EnsembleRetriever
+import jieba
 
-# 1. 加载你本地的 chinese-roberta-wwm-ext-large 模型
+from bm25 import BM25, rrf_fusion, tokenize_zh, term_freq, doc_freq
+
+def chinese_preprocess_func(text: str):
+    return jieba.lcut(text)
+
+# 1. 加载你本地的 bge-small-zh-v1.5 模型
 # 注意：这里的路径指向你下载好的模型文件夹
 # 如果你还没有这个模型，需要先从 Hugging Face 下载到本地
 embedding_model = HuggingFaceEmbeddings(
-    model_name="../hutao/bert/chinese-roberta-wwm-ext-large",  # 替换成你实际的模型路径
-    model_kwargs={'device': 'cpu'},  # 可以改成 'cuda' 如果显卡够用
-    encode_kwargs={'normalize_embeddings': False}
+    # 注意：复制你终端里输出的那个完整路径
+    model_name="./models/models/BAAI--bge-small-zh-v1.5/snapshots/master",  
+    model_kwargs={'device': 'cpu'},
+    encode_kwargs={'normalize_embeddings': True}  # BGE 模型必须设为 True
 )
 
 # 2. 加载知识库文档
@@ -23,21 +28,52 @@ def load_documents(sub_dir=None):
     data_dir = "knowledge/"
     if sub_dir:
         data_dir = os.path.join(data_dir, sub_dir)
-    for filename in os.listdir(data_dir):
-        if filename.endswith(".txt"):
-            loader = TextLoader(os.path.join(data_dir, filename), encoding="utf-8")
-            print(f"加载文件: {filename}")
-            docs.extend(loader.load())
+        
+    # 如果指定了 sub_dir，或者没指定但根目录没文件，就递归遍历
+    if sub_dir:
+        for filename in os.listdir(data_dir):
+            if filename.endswith(".txt"):
+                loader = TextLoader(os.path.join(data_dir, filename), encoding="utf-8")
+                docs.extend(loader.load())
+    else:
+        # 遍历 knowledge 下所有的子文件夹
+        for root, dirs, files in os.walk(data_dir):
+            for filename in files:
+                if filename.endswith(".txt"):
+                    filepath = os.path.join(root, filename)
+                    loader = TextLoader(filepath, encoding="utf-8")
+                    print(f"加载文件: {filename}")
+                    docs.extend(loader.load())
     return docs
-
 # 3. 文本切分
 def split_documents(docs):
-    text_splitter = RecursiveCharacterTextSplitter(
-        chunk_size=90,
-        chunk_overlap=10,
-        separators=["\n\n", "\n", "。", "！", "？", "；", "，", " ", ""]
-    )
-    return text_splitter.split_documents(docs)
+    chunks = []
+    for doc in docs:
+        source = doc.metadata["source"]
+        
+        # 最土的 if-else，绝对不会出错
+        if "voice_lines" in source or "评价" in source:
+            # 短文本：按段落切
+            paragraphs = [p.strip() for p in doc.page_content.split("\n\n") if p.strip()]
+            for p in paragraphs:
+                from langchain_core.documents import Document
+                chunks.append(Document(page_content=p, metadata=doc.metadata.copy()))
+        else:
+            # 长文本：用 splitter 切
+            text_splitter = RecursiveCharacterTextSplitter(
+                chunk_size=300, chunk_overlap=50,
+                separators=["\n\n", "\n", "。", "！", "？", "；", "，", " ", ""]
+            )
+            chunks.extend(text_splitter.split_documents([doc]))
+            
+    # 加 doc_id
+    for i, chunk in enumerate(chunks):
+        filename = os.path.basename(chunk.metadata["source"]).removesuffix(".txt")
+        # 注意：这里如果同一个文件产生多个 chunk，i 是全局递增的
+        chunk.metadata["doc_id"] = f"{filename}_{i}"
+        
+    return chunks
+
 
 # 4. 构建 FAISS 向量库
 def build_vectorstore(chunks, index_path):
@@ -48,28 +84,13 @@ def build_vectorstore(chunks, index_path):
     vectordb.save_local(index_path)   # ← 用传入的路径，而不是硬编码的 "./faiss_index"
     return vectordb
 
-# 5. 构建混合检索器
-def build_hybrid_retriever(chunks, vectordb):
-     # BM25 检索器：关键词精确匹配
-    bm25_retriever = BM25Retriever.from_documents(chunks, k=10)
 
-    # FAISS 向量检索器：语义泛化
-    faiss_retriever = vectordb.as_retriever(search_kwargs={"k": 3})
-
-    # 融合：两个检索器各占一半权重
-    ensemble_retriever = EnsembleRetriever(
-        retrievers=[bm25_retriever, faiss_retriever],
-        weights=[0.7, 0.3]
-    )
-    return ensemble_retriever
-
-# 6. 检索函数（供 Agent 调用）
-def search_hu_tao(query, k=10, category=None):
+# 5. 检索函数（供 Agent 调用）
+def search_hu_tao(query, k=10, category=None, return_ids=False):
     category_map = {
-        "food": "食物喜好",
-        "character": "角色评价",
-        "story": "背景故事",
-        "misc": "台词杂项",
+    "character": "角色评价",
+    "story": "背景故事",
+    "misc": "其他台词",
     }
     sub_dir = category_map.get(category) if category else None
     index_path = f"./faiss_index_{category}" if category else "./faiss_index"
@@ -84,15 +105,29 @@ def search_hu_tao(query, k=10, category=None):
         docs = load_documents(sub_dir)
         chunks = split_documents(docs)
     else:
-        print(f"【调试】开始构建 {category} 索引")
+
         docs = load_documents(sub_dir)
         chunks = split_documents(docs)
-        print(f"【调试】加载了 {len(docs)} 个文档，切分为 {len(chunks)} 个块")
-        vectordb = build_vectorstore(chunks, index_path)
-        print(f"【调试】{category} FAISS 索引构建完成")
 
+        vectordb = build_vectorstore(chunks, index_path)
+
+    # 6. 构建混合检索器
     # 构建 BM25（用分类 chunks）
-    ensemble_retriever = build_hybrid_retriever(chunks, vectordb)
-    results = ensemble_retriever.invoke(query)
-    print(f"【调试】检索到 {len(results)} 个结果")
-    return [doc.page_content for doc in results[:k]]
+    docs_dict = {chunk.metadata["doc_id"]: chunk.page_content for chunk in chunks}
+
+    bm25 = BM25(docs_dict)
+    bm25_results = bm25.search(query, top_k=10)
+
+
+    faiss_retriever = vectordb.as_retriever(search_kwargs={"k": 3})
+    faiss_docs = faiss_retriever.invoke(query)
+    faiss_results = [(doc.metadata["doc_id"], 0.0) for doc in faiss_docs]
+
+
+    results = rrf_fusion([faiss_results, bm25_results])
+    top_results = results[:k]
+
+    if return_ids:
+        return [(doc_id, score) for doc_id, score in top_results]
+    
+    return [docs_dict[doc_id] for doc_id, score in top_results]

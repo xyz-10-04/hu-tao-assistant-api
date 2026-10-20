@@ -24,6 +24,7 @@ ENV/
 bert/
 models/
 chroma_db/
+faiss_index*/
 
 # OS generated files
 .DS_Store

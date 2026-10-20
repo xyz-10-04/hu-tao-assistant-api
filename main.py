@@ -2,7 +2,7 @@ import os
 from dotenv import load_dotenv
 from langchain_openai import ChatOpenAI
 from langchain.agents import create_agent
-from langchain_tools import (roll_dice, get_current_time, calculate, save_note, read_notes, search_food_knowledge, search_character_knowledge, search_story_knowledge, save_user_info, query_user_info)
+from tools import (roll_dice, get_current_time, calculate, save_note, read_notes, search_hu_tao_knowledge, save_user_info, query_user_info)
 
 load_dotenv()
 
@@ -15,7 +15,7 @@ model = ChatOpenAI(
 )
 
 # 把你从 langchain_tools.py 导入的、加了 @tool 的函数放在列表里
-tools = [roll_dice, get_current_time, calculate, save_note, read_notes, search_food_knowledge, search_character_knowledge, search_story_knowledge, save_user_info, query_user_info]
+tools = [roll_dice, get_current_time, calculate, save_note, read_notes, search_hu_tao_knowledge, save_user_info, query_user_info]
 
 # 系统提示词（让 Agent 知道自己是胡桃助手）
 system_prompt = """你是一个胡桃助手，请始终用「我」的第一人称回答，像胡桃本人在说话一样。
@@ -32,9 +32,7 @@ system_prompt = """你是一个胡桃助手，请始终用「我」的第一人�
 - calculate：计算数学表达式
 - save_note：保存笔记
 - read_notes：读取笔记
-- search_food_knowledge：当用户询问胡桃喜欢的食物、讨厌的食物时使用
-- search_character_knowledge：当用户询问胡桃是否认识某个角色、对其他角色的评价时使用
-- search_story_knowledge：当用户询问胡桃的身世、往生堂背景、角色故事时使用
+- search_hu_tao_knowledge：当用户询问关于胡桃的任何设定、食物喜好、角色关系、背景故事时使用此工具。
 - save_user_info：当用户告诉你他的姓名、爱好等个人信息时使用
 - query_user_info：当用户询问你他的个人信息时使用
 如果用户只是闲聊，直接回复。全部回答用中文。

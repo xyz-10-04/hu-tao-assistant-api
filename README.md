@@ -1,119 +1,51 @@
-# 胡桃助手 (Hu Tao Assistant)
+# 胡桃助手 (Hu Tao Assistant) - 基于 RAG 与 ReAct Agent 的角色问答系统
 
-一个基于 RAG 与 ReAct Agent 的角色问答 AI 助手。  
-用胡桃的第一人称语气，回答关于《原神》角色胡桃的设定、故事、人际关系，同时支持基础工具调用与长期记忆。
+## 📖 项目简介
+基于混合检索（BM25 + 向量检索）与 ReAct Agent 架构的原神角色问答系统。项目脱离了纯框架依赖，从零手写了 BM25 与 RRF 融合算法，并通过自建评测集完成了 RAG 链路的量化调优。
 
-## ✨ 功能亮点
+## 🛠 技术栈
+- **核心语言**：Python 3.14
+- **大模型 API**：DeepSeek API (通过 langchain-openai 接入)
+- **检索与向量**：FAISS, BGE-small-zh (Embedding)
+- **Web 框架**：FastAPI, Streamlit
+- **数据库**：SQLite, SQLAlchemy (用于持久化记忆)
 
-- **角色知识问答（RAG）**  
-  基于本地知识库检索，准确回答胡桃的生日、武器、故事、对其他角色的评价等。  
-  混合检索：**BM25 + FAISS 向量检索**，按“食物喜好 / 角色评价 / 背景故事”分类建索引，避免多类别互相挤占。  
-  经过调优，角色识别召回率从 **20% 提升至 90%**（测试集 30 个问题）。
+## ✨ 核心亮点
+1. **手写底层算法**：脱离 LangChain 封装，纯手写中文分词（基于 jieba）、BM25 打分、以及 RRF（倒数排名融合）算法，深刻理解检索底层原理。
+2. **混合检索策略**：结合 BM25（关键词精准匹配）与 BGE（语义向量泛化），通过 RRF 算法加权融合，大幅提升召回率。
+3. **数据驱动的调优**：建立 20 条标准评测集（涵盖人物设定、故事背景、角色评价），Recall@3 达到 95%。
+4. **Agent 智能路由**：基于 ReAct 模式，大模型自主判断是否需要调用工具，支持混合检索、计算、时间查询及长期记忆保存。
 
-- **Agent 工具调用**  
-  基于 **LangChain ReAct Agent**，模型自主决策调用以下工具：  
-  `roll_dice`、`get_current_time`、`calculate`、`save_note`、`read_notes`、`search_food_knowledge`、`search_character_knowledge`、`search_story_knowledge`。
+## 🏗 系统架构流程
+1. 用户提问通过 FastAPI/Streamlit 传入后端。
+2. Agent（大模型）接收 Prompt 与工具列表，判断是否需要调用工具。
+3. 若需要检索，Agent 调用 `search_hu_tao_knowledge` 工具。
+4. 检索器并行执行：
+   - BM25 进行关键词倒排检索。
+   - FAISS 进行 BGE 向量语义检索。
+   - 使用 RRF 算法对两路结果进行重新排序。
+5. 检索结果与用户问题拼接，交回大模型进行最终回答生成（若一次未解决，ReAct 循环会继续，设有最大步数限制）。
 
-- **长期记忆**  
-  用 **SQLite + SQLAlchemy** 持久化存储用户姓名、偏好，通过工具 `save_user_info` / `query_user_info` 存取。  
-  下次对话时，胡桃能记住你的名字。
+## 🕳 踩坑与优化记录 (V1.0 -> V3.0)
+- **Embedding 模型的演进**：初版使用 `chinese-roberta-wwm-ext-large` 直接生成向量，发现完全不具备语义检索能力（问“喜欢吃什么”召回“烦恼”）。通过消融实验确认后，替换为专为检索优化的 `BGE-small-zh`，纯 FAISS 的 Top-1 准确率显著提升。
+- **切分策略的调优**：
+  - 初始 `chunk_size=250`：切分过大，导致一条 chunk 混入多条不相干台词，检索命中率虚高但噪音极大。
+  - 调整 `chunk_size=150`：统一切分导致长故事文本被腰斩，短台词失去上下文，Recall@3 跌至 30%。
+  - **最终方案**：在 `split_documents` 中引入定制策略。针对短文本（台词/评价）按 `\n\n` 严格切分，保证单句独立；针对长文本（角色故事）采用 `chunk_size=300, overlap=50`，保证上下文连贯。最终 Recall@3 达到 95%。
 
-- **流式输出**  
-  后端 **FastAPI + SSE**，前端 **Streamlit** 逐字显示，聊天体验更自然。
-
-- **工程化**  
-  模块化拆分、环境变量管理、日志轮转、依赖精简（100+ → 15 个）。
-
-## 🧠 技术栈
-
-| 模块 | 技术 |
-|------|------|
-| AI 框架 | LangChain, FAISS, sentence-transformers |
-| Embedding 模型 | `chinese-roberta-wwm-ext-large` |
-| 大语言模型 | DeepSeek API |
-| 后端 | FastAPI, SQLAlchemy, SQLite |
-| 前端 | Streamlit |
-| 工具链 | Git, Python, python-dotenv |
-
-## 📁 项目结构
-```
-hu-tao-assistant-api/
-├── knowledge/ # 胡桃知识库（按类别分子目录）
-│ ├── 食物喜好/
-│ ├── 角色评价/
-│ ├── 背景故事/
-│ └── 台词杂项/
-├── eval/ 测试文件
-│ ├── draft_questions.txt
-│ ├── questions.jsonl
-│ ├── report.md
-│ └── run_retrieval_eval.py
-├── faiss_index_misc        其他台词 FAISS 索引（自动生成）
-├── faiss_index_character   角色评价 FAISS 索引（自动生成）
-├── faiss_index_story       角色故事 FAISS 索引（自动生成）
-├── app.py # Streamlit 前端
-├── main_api.py # FastAPI 后端入口
-├── langchain_main.py # Agent 初始化与系统提示词
-├── langchain_tools.py # LangChain @tool 工具定义
-├── rag_build.py # RAG 检索逻辑（混合检索 + 分类路由）
-├── memory.py # 记忆读写（SQLAlchemy）
-├── models.py # 数据库模型
-├── database.py # 数据库连接
-├── config.py # 配置常量
-├── archive/ # 旧版本代码（命令行版）
-├── requirements.txt
-└── README.md
-```
-
-## 🚀 快速开始
-
-### 1. 克隆项目
-
+## 🚀 快速复现指南
+### 1. 环境准备
 ```bash
-git clone https://github.com/xyz-10-04/hu-tao-assistant-api.git
-cd hu-tao-assistant-api
-```
-
-### 2. 创建虚拟环境并安装依赖
-```bash
+# 创建虚拟环境并激活
 python -m venv venv
-venv\Scripts\activate      # Windows
+venv\Scripts\activate  # Windows
 # source venv/bin/activate  # Mac/Linux
+
+# 安装依赖
 pip install -r requirements.txt
-```
 
-### 3. 配置环境变量
-在项目根目录创建 .env 文件，填入：
-```
-DEEPSEEK_API_KEY=你的DeepSeek密钥
-```
-
-### 4. 准备 Embedding 模型
-```
-项目依赖本地模型 chinese-roberta-wwm-ext-large，需提前下载到 bert/chinese-roberta-wwm-ext-large/，并在 rag_build.py 中修改 model_name 路径。如需自行下载，可使用 Hugging Face 或镜像站 https://hf-mirror.com。
-```
-
-### 5. 启动后端
-```bash
+# 启动 Agent 控制台对话
+python main.py
+# 启动后端 API
 uvicorn main_api:app --reload
-```
-
-### 6. 启动前端
-另开一个终端：
-```bash
-streamlit run app.py
-```
-
-浏览器打开 http://localhost:8501 即可与胡桃对话。
-
-
-🧪 测试与效果
-测试集：30 个预设问题（角色设定、生日、武器、食物、人际关系等）
-准确率：85%/90%/90% （人工判断答案是否引用文档原文）
-优化措施：混合检索、分类索引、Prompt 工程、工具拆分、chunk_size=90、k=10
-
-📌 后续计划
-增量更新知识库
-支持多轮对话上下文
-扩展更多角色知识库
 ```

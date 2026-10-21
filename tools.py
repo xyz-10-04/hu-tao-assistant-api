@@ -78,14 +78,13 @@ def read_notes():
 
 @tool
 def search_hu_tao_knowledge(query: str) -> str:
-    """当用户询问胡桃的喜好、评价、身世背景、台词等问题时，使用此工具检索知识库。"""
+    """当用户询问关于胡桃的任何设定、食物喜好、角色关系、背景故事时使用此工具。"""
+    from rag_build import search_hu_tao
     try:
-        # 不传 category，默认全库混合检索
         docs = search_hu_tao(query, k=8)
         if not docs:
             return "未找到相关信息"
-        context = "\n".join(docs)
-        return f"以下是从胡桃知识库检索到的相关内容，请据此回答：\n{context}"
+        return f"以下是从知识库检索到的相关内容：\n" + "\n".join(docs)
     except Exception as e:
         return f"检索失败：{e}"
 

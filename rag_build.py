@@ -9,6 +9,11 @@ import jieba
 
 from bm25 import BM25, rrf_fusion, tokenize_zh, term_freq, doc_freq
 
+from sentence_transformers import CrossEncoder
+
+# 路径填你刚刚下载后终端打印出来的那个路径
+reranker = CrossEncoder("./models/models/BAAI--bge-reranker-base/snapshots/master")
+
 def chinese_preprocess_func(text: str):
     return jieba.lcut(text)
 
@@ -118,16 +123,31 @@ def search_hu_tao(query, k=10, category=None, return_ids=False):
     bm25 = BM25(docs_dict)
     bm25_results = bm25.search(query, top_k=10)
 
-
     faiss_retriever = vectordb.as_retriever(search_kwargs={"k": 3})
     faiss_docs = faiss_retriever.invoke(query)
     faiss_results = [(doc.metadata["doc_id"], 0.0) for doc in faiss_docs]
 
-
+    # 1. 拿到 RRF 融合后的前 10 个结果
     results = rrf_fusion([faiss_results, bm25_results])
-    top_results = results[:k]
-
-    if return_ids:
-        return [(doc_id, score) for doc_id, score in top_results]
+    top_candidates = results[:10]
     
-    return [docs_dict[doc_id] for doc_id, score in top_results]
+    # 2. 构造精排输入：[问题, 文档内容]
+    pairs = [[query, docs_dict[doc_id]] for doc_id, _ in top_candidates]
+    
+    # 3. 让 Reranker 重新打分
+    rerank_scores = reranker.predict(pairs)
+    
+    # 4. 根据新分数重新排序
+    reranked = []
+    for i, (doc_id, _) in enumerate(top_candidates):
+        reranked.append((doc_id, rerank_scores[i]))
+    reranked.sort(key=lambda x: x[1], reverse=True)
+    
+    # 5. 取前 k 个返回
+    final_results = reranked[:k]
+
+    # 6. 🚨 保留你的两套返回逻辑，只是把 top_results 换成了 final_results
+    if return_ids:
+        return [(doc_id, score) for doc_id, score in final_results]
+    
+    return [docs_dict[doc_id] for doc_id, score in final_results]

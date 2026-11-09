@@ -14,6 +14,7 @@ import logging
 from logging.handlers import RotatingFileHandler
 import uuid
 
+from langchain_core.messages import HumanMessage, AIMessage
 
 # 创建 logger
 logger = logging.getLogger("huTao")   # "huTao" 可以改成你喜欢的名字，但不是必须改
@@ -91,29 +92,47 @@ async def api_update_memory(update: MemoryUpdate):
 
 class ChatRequest(BaseModel):
     message: str = Field(..., min_length=1, max_length=500, description="用户输入的消息")
+    history: list = Field(default_factory=list, description="历史对话记录，格式为 [{'role': 'user', 'content': '...'}, {'role': 'assistant', 'content': '...'}]")
 
 import asyncio
 
 @app.post("/chat")
 async def chat_endpoint(request: ChatRequest):
-    request_id = str(uuid.uuid4())[:8]  # 取前8位短ID
+    # 🚨 确保这行在函数最开头，不要漏了
+    request_id = str(uuid.uuid4())[:8]
     start_time = time.time()
-    # 记录请求（截断长消息）
-    logger.info(f"[{request_id}] 收到请求: {request.message[:50]}...") # 截断长消息
+    logger.info(f"[{request_id}] 收到请求: {request.message[:50]}...")
 
     try:
-        # 设置 90 秒超时
+        # 1. 解析历史记录
+        messages = []
+        for msg in request.history:
+            if msg.get("role") == "user":
+                messages.append(HumanMessage(content=msg.get("content")))
+            elif msg.get("role") == "assistant":
+                messages.append(AIMessage(content=msg.get("content")))
+        
+        # 2. 拼入最新一句话
+        messages.append(HumanMessage(content=request.message))
+        
+        # 3. 截断
+        if len(messages) > 20:
+            messages = messages[-20:]
+
+        # 4. 调 Agent
         result = await asyncio.wait_for(
             asyncio.to_thread(
                 agent.invoke,
-                {"messages": [{"role": "user", "content": request.message}]}
+                {"messages": messages}
             ),
             timeout=90.0
         )
+        
         reply = result["messages"][-1].content
         elapsed = time.time() - start_time
         logger.info(f"[{request_id}] 回复成功，耗时: {elapsed:.2f}s")
         return {"reply": reply}
+    
     except asyncio.TimeoutError:
         logger.warning(f"[{request_id}] 请求超时: {request.message[:30]}...")
         return {"error": "请求超时，请稍后再试"}
@@ -121,8 +140,10 @@ async def chat_endpoint(request: ChatRequest):
         logger.error(f"[{request_id}] 处理请求失败: {e}")
         return {"error": str(e)}
 
+
 @app.post("/chat/stream")
 async def chat_stream_endpoint(request: ChatRequest):
+    # 🚨 确保这行在函数最开头，不要漏了
     request_id = str(uuid.uuid4())[:8]
     logger.info(f"[{request_id}] 收到流式请求: {request.message[:50]}...")
 
@@ -134,8 +155,24 @@ async def chat_stream_endpoint(request: ChatRequest):
 
     async def generate():
         try:
+            # 1. 解析历史记录
+            messages = []
+            for msg in request.history:
+                if msg.get("role") == "user":
+                    messages.append(HumanMessage(content=msg.get("content")))
+                elif msg.get("role") == "assistant":
+                    messages.append(AIMessage(content=msg.get("content")))
+            
+            # 2. 拼入最新一句话
+            messages.append(HumanMessage(content=request.message))
+            
+            # 3. 截断
+            if len(messages) > 20:
+                messages = messages[-20:]
+
+            # 4. 流式调 Agent
             async for event in agent.astream_events(
-                {"messages": [{"role": "user", "content": request.message}]},
+                {"messages": messages},
                 version="v2"
             ):
                 if event["event"] == "on_chat_model_stream":

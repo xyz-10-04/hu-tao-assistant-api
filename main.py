@@ -3,15 +3,16 @@ from dotenv import load_dotenv
 from langchain_openai import ChatOpenAI
 from langchain.agents import create_agent
 from tools import (roll_dice, get_current_time, calculate, save_note, read_notes, search_hu_tao_knowledge, save_user_info, query_user_info)
+from langchain_core.messages import HumanMessage
 
 load_dotenv()
 
 # 初始化大模型（用 DeepSeek API）
 model = ChatOpenAI(
-    model="deepseek-v4-flash-vision-exp",
+    model="deepseek-flash",
     openai_api_key=os.getenv("DEEPSEEK_API_KEY"),
     openai_api_base="https://api.deepseek.com",  # 注意参数名是 openai_api_base
-    temperature=0.5
+    temperature=0.2
 )
 
 # 把你从 langchain_tools.py 导入的、加了 @tool 的函数放在列表里
@@ -26,6 +27,7 @@ system_prompt = """你是一个胡桃助手，请始终用「我」的第一人�
 - 不要直接说“不认识”，除非检索结果中完全没有提到该角色。
 - “认识”的定义：只要知识库中提到了某个角色的名字，或者胡桃对该角色有评价，就视为胡桃认识该角色。不要因为“只知道身份”就说不认识。
 - 回答时，先复述你从知识库中检索到的相关信息，再给出你的看法。
+- 如果用户询问的是刚刚在对话中提过的内容，请直接参考历史记录回答，不要调用任何查询工具。
 - 你可以调用以下工具来帮助用户：
 - roll_dice：掷骰子
 - get_current_time：获取当前时间
@@ -42,22 +44,32 @@ agent = create_agent(
     model=model,
     tools=tools,
     system_prompt=system_prompt
-)
+).with_config({"recursion_limit": 20}) 
 
 print("工具助手已启动，输入 exit 或 quit 退出")
 
+
 if __name__ == "__main__":
+    history = []
+
     while True:
         user_input = input("你：")
         if user_input.lower() in ('exit', 'quit'):
             break
 
-        # LangChain 1.0 推荐的调用方式[reference:3][reference:4]
-        result = agent.invoke({
-            "messages": [{"role": "user", "content": user_input}]
-        })
+        # 1. 🚨这里不要用 dict 了，用 HumanMessage 对象
+        history.append(HumanMessage(content=user_input))
 
-        # 提取最后一条回复
-        reply = result["messages"][-1].content
+        # 2. 传完整历史
+        result = agent.invoke({"messages": history})
+
+        # 3. 拿回完整的 Message 列表，这里面全是 LangChain 对象
+        history = result["messages"]
+
+        # 4. 截断保护
+        if len(history) > 20:
+            history = history[-20:]
+
+        # 5. 打印回复
+        reply = history[-1].content
         print(f"胡桃：{reply}")
-

@@ -17,4 +17,4 @@
 {"id": "q017", "question": "胡桃做生意的态度", "category": "story", "expected_doc_ids": ["hutao_story2_10", "hutao_story2_11"], "difficulty": "easy"}
 {"id": "q018", "question": "七七为什么这么怕你", "category": "story", "expected_doc_ids": ["他人对胡桃的评价_7", "hutao_story4_14", "hutao_story4_15"], "difficulty": "medium"}
 {"id": "q019", "question": "乾坤泰卦帽的由来", "category": "story", "expected_doc_ids": ["hutao_basic_3"], "difficulty": "easy"}
-{"id": "q020", "question": "如何看待往生堂的钟离客卿", "category": "character", "expected_doc_ids": ["hutao_story2_10", "hutao_story2_11", "他人对胡桃的评价_15"], "difficulty": "easy"}
+{"id": "q020", "question": "如何看待往生堂的钟离客卿", "category": "character", "expected_doc_ids": ["hutao_story2_10", "hutao_story2_11", "胡桃对他人的评价_15"], "difficulty": "easy"}

@@ -8,10 +8,10 @@ st.title("胡桃助手")
 st.caption("往生堂第七十七代堂主，为你服务")
 
 
-def stream_chat(message):
+def stream_chat(message, history):
     url = "http://localhost:8000/chat/stream"
     try:
-        response = requests.post(url, json={"message": message}, stream=True, timeout=120)
+        response = requests.post(url, json={"message": message, "history": history}, stream=True, timeout=120)
         
         # ← 在这里加：判断状态码
         if response.status_code != 200:
@@ -116,7 +116,9 @@ if user_input:
     with st.chat_message("assistant"):
         with st.spinner("胡桃正在思考..."):
             try:
-                response = st.write_stream(stream_chat(user_input))
+                # 🚨 把之前的历史记录（不包含刚刚存的这句 user_input）传给后端
+                history_data = st.session_state.messages[:-1] 
+                response = st.write_stream(stream_chat(user_input, history_data))
             except Exception as e:
                 response = f"处理请求时发生错误：{e}"
         st.session_state.messages.append({"role": "assistant", "content": response})

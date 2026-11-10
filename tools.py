@@ -150,18 +150,16 @@ def read_notes():
         db.close()
 
 
+# 修改后的 search_hu_tao_knowledge 工具
 @tool
-@retry(times=3, delay=1) # 🚨 加上这行
+@retry(times=3, delay=1)
 def search_hu_tao_knowledge(query: str) -> str:
     """当用户询问关于胡桃的任何设定、食物喜好、角色关系、背景故事时使用此工具。"""
-    try:
-        docs = search_hu_tao(query, k=8)
-        if not docs:
-            return "未找到相关信息"
-        return f"以下是从知识库检索到的相关内容：\n" + "\n".join(docs)
-    except Exception as e:
-        return f"检索失败：{e}"
-
+    # 🚨 删掉 try-except，直接让 retry 去接管
+    docs = search_hu_tao(query, k=8) 
+    if not docs:
+        return "未找到相关信息"
+    return "以下是从知识库检索到的相关内容：\n" + "\n".join(docs)
 
 @tool
 def save_user_info(info_type: str, content: str) -> str:

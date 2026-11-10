@@ -1,8 +1,62 @@
-
 import random
 from datetime import datetime
+import ast
+import operator
+
+# ================== AST 安全求值器 ==================
+ALLOWED_OPERATORS = {
+    ast.Add: operator.add,      # +
+    ast.Sub: operator.sub,      # -
+    ast.Mult: operator.mul,     # *
+    ast.Div: operator.truediv,  # /
+    ast.Mod: operator.mod,      # %
+    ast.FloorDiv: operator.floordiv # //
+}
+
+def safe_eval(expr: str) -> float:
+    """安全的数学表达式求值，只允许基础四则运算"""
+    if len(expr) > 100:
+        raise ValueError("表达式过长")
+        
+    try:
+        node = ast.parse(expr, mode='eval').body
+        return _eval_node(node)
+    except Exception:
+        raise ValueError("表达式包含非法字符或不支持的运算")
+
+def _eval_node(node):
+    if isinstance(node, ast.Constant):
+        if isinstance(node.value, (int, float)):
+            return node.value
+        raise ValueError("只支持数字")
+        
+    elif isinstance(node, ast.BinOp):
+        left = _eval_node(node.left)
+        right = _eval_node(node.right)
+        op_type = type(node.op)
+        
+        if op_type in ALLOWED_OPERATORS:
+            try:
+                return ALLOWED_OPERATORS[op_type](left, right)
+            except ZeroDivisionError:
+                raise ValueError("不能除以零")
+        else:
+            raise ValueError("不支持的运算符")
+            
+    elif isinstance(node, ast.UnaryOp):
+        operand = _eval_node(node.operand)
+        if isinstance(node.op, ast.USub):
+            return -operand
+        elif isinstance(node.op, ast.UAdd):
+            return +operand
+        else:
+            raise ValueError("不支持的一元运算符")
+            
+    else:
+        raise ValueError("不支持的语法结构")
 
 
+# ================== 业务工具 ==================
 def save_note(content):
     """保存笔记到数据库"""
     from database import SessionLocal
@@ -34,8 +88,6 @@ def read_notes():
     finally:
         db.close()
 
-
-#===========  工具  =======================
 def roll_dice():
     return random.randint(1, 6)
 
@@ -43,22 +95,13 @@ def get_current_time():
     return datetime.now().strftime("%Y年%m月%d日 %H:%M:%S")
 
 def calculate(expr):
-    # 1. 白名单：只允许数字、运算符、括号、空格和小数点
-    ALLOWED_CHARS = "0123456789+-*/.() "
-    
-    # 2. 检查表达式是否只包含允许的字符
-    if not all(c in ALLOWED_CHARS for c in expr):
-        return "错误：表达式包含非法字符，仅允许数字、运算符、括号和空格"
-
-    # 3. 尝试执行计算
+    """API 端的计算器（已升级为 AST 安全求值）"""
     try:
-        # 限制 eval 的环境，防止执行危险操作
-        result = eval(expr, {"__builtins__": None}, {})
-        return result
-    except ZeroDivisionError:
-        return "错误：不能除以零"
-    except (SyntaxError, TypeError, NameError):
-        return "错误：表达式语法有误，请检查括号和运算符"
+        result = safe_eval(expr)
+        if isinstance(result, float) and result.is_integer():
+            return str(int(result))
+        return str(result)
+    except ValueError as e:
+        return f"错误：{e}"
     except Exception as e:
         return f"未知错误：{e}"
-

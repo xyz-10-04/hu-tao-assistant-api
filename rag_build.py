@@ -1,5 +1,5 @@
 
-from langchain_community.embeddings import HuggingFaceEmbeddings
+from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_community.vectorstores import FAISS
 from langchain_community.document_loaders import TextLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
@@ -11,11 +11,11 @@ from bm25 import BM25, rrf_fusion
 
 from sentence_transformers import CrossEncoder
 
-BGE_EMBEDDING_DIR = "./models/bge-small-zh-v1.5"
-BGE_RERANKER_DIR = "./models/bge-reranker-base"
+BGE_EMBEDDING_DIR = "./models/bge-small-zh-v1.5/snapshots/master"
+BGE_RERANKER_DIR = "./models/bge-reranker-base/snapshots/master"
 
 # 路径填你刚刚下载后终端打印出来的那个路径
-reranker = CrossEncoder("BGE_RERANKER_DIR")
+reranker = CrossEncoder(BGE_RERANKER_DIR)
 
 
 def chinese_preprocess_func(text: str):
@@ -26,7 +26,7 @@ def chinese_preprocess_func(text: str):
 # 如果你还没有这个模型，需要先从 Hugging Face 下载到本地
 embedding_model = HuggingFaceEmbeddings(
     # 注意：复制你终端里输出的那个完整路径
-    model_name="BGE_EMBEDDING_DIR",  
+    model_name=BGE_EMBEDDING_DIR,  
     model_kwargs={'device': 'cpu'},
     encode_kwargs={'normalize_embeddings': True}  # BGE 模型必须设为 True
 )

@@ -7,12 +7,16 @@ import os
 
 import jieba
 
-from bm25 import BM25, rrf_fusion, tokenize_zh, term_freq, doc_freq
+from bm25 import BM25, rrf_fusion
 
 from sentence_transformers import CrossEncoder
 
+BGE_EMBEDDING_DIR = "./models/bge-small-zh-v1.5"
+BGE_RERANKER_DIR = "./models/bge-reranker-base"
+
 # 路径填你刚刚下载后终端打印出来的那个路径
-reranker = CrossEncoder("./models/models/BAAI--bge-reranker-base/snapshots/master")
+reranker = CrossEncoder("BGE_RERANKER_DIR")
+
 
 def chinese_preprocess_func(text: str):
     return jieba.lcut(text)
@@ -22,7 +26,7 @@ def chinese_preprocess_func(text: str):
 # 如果你还没有这个模型，需要先从 Hugging Face 下载到本地
 embedding_model = HuggingFaceEmbeddings(
     # 注意：复制你终端里输出的那个完整路径
-    model_name="./models/models/BAAI--bge-small-zh-v1.5/snapshots/master",  
+    model_name="BGE_EMBEDDING_DIR",  
     model_kwargs={'device': 'cpu'},
     encode_kwargs={'normalize_embeddings': True}  # BGE 模型必须设为 True
 )
